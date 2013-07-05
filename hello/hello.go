@@ -11,10 +11,6 @@ func init() {
 	http.HandleFunc("/sign", sign)
 }
 
-<<<<<<< HEAD
-func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "Hello World !!!")
-=======
 const guestbookForm = `
 <!doctype html>
 <html>
@@ -47,5 +43,4 @@ func sign(w http.ResponseWriter, r *http.Request) {
 	if err := signTemplate.Execute(w, r.FormValue("content")); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
->>>>>>> web-form
 }
