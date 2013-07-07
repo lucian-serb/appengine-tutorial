@@ -15,16 +15,23 @@ type Greeting struct {
 	Date    time.Time
 }
 
+type User struct {
+	IsLoggedIn bool
+	Greetings  []Greeting
+}
+
 func init() {
 	http.HandleFunc("/", root)
 	http.HandleFunc("/sign", sign)
+	http.HandleFunc("/login", login)
+	http.HandleFunc("/logout", logout)
 }
 
 const guestbookTemplateHTML = `
 <!doctype html>
 <html>
 	<body>
-		{{range .}}
+		{{range .Greetings}}
 			{{with .Author}}
 				<p><b>{{.}}</b> wrote:</p>
 			{{else}}
@@ -34,8 +41,20 @@ const guestbookTemplateHTML = `
 		{{end}}
 		<form action="/sign" method="post">
 			<div><textarea name="content" rows="3" cols="60"></textarea></div>
-			<div><input type="submit" value="Sign Guestbook"></div>
+			<div>
+				<input type="submit" value="Sign Guestbook">
+				{{if .IsLoggedIn}}
+					<input type="submit" value="Logout" form="logout">
+				{{else}}
+					<input type="submit" value="Login" form="login">
+				{{end}}
+			</div>
 		</form>
+		{{if .IsLoggedIn}}
+			<form action="/logout" method="post" id="logout"></form>
+		{{else}}
+			<form action="/login" method="post" id="login"></form>
+		{{end}}
 	</body>
 </html>
 `
@@ -52,7 +71,13 @@ func root(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := guestbookTemplate.Execute(w, greetings); err != nil {
+	isLoggedIn := user.Current(c) != nil
+	usr := User{
+		isLoggedIn,
+		greetings,
+	}
+
+	if err := guestbookTemplate.Execute(w, usr); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -77,4 +102,26 @@ func sign(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func login(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+
+	if url, err := user.LoginURL(c, "/"); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	} else {
+		http.Redirect(w, r, url, http.StatusSeeOther)
+	}
+}
+
+func logout(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+
+	if url, err := user.LogoutURL(c, "/"); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	} else {
+		http.Redirect(w, r, url, http.StatusSeeOther)
+	}
 }
